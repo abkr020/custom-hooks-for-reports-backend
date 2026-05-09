@@ -4,6 +4,72 @@ import { neonQuery } from "../db/neonPostgresDB.js";
 // ==============================
 // GET ALL STUDENTS
 // ==============================
+export const studentFieldMap = {
+    id: {
+        db: "student_id",
+    },
+
+    "name.first_name": {
+        db: "first_name",
+    },
+
+    "name.last_name": {
+        db: "last_name",
+    },
+
+    gender: {
+        db: "gender",
+    },
+
+    age: {
+        db: "age",
+    },
+
+    "classInfo.class": {
+        db: "class",
+    },
+
+    "classInfo.section": {
+        db: "section",
+    },
+
+    "address.city": {
+        db: "city",
+    },
+
+    "address.country": {
+        db: "country",
+    },
+};
+
+export const formatStudent = (student) => {
+
+    const formatted = {};
+
+    Object.entries(studentFieldMap).forEach(([accessor, config]) => {
+
+        const keys = accessor.split(".");
+
+        let current = formatted;
+
+        // create nested objects
+        for (let i = 0; i < keys.length - 1; i++) {
+
+            if (!current[keys[i]]) {
+                current[keys[i]] = {};
+            }
+
+            current = current[keys[i]];
+        }
+
+        // set final value
+        current[keys[keys.length - 1]] =
+            student[config.db];
+    });
+
+    return formatted;
+};
+
 export const getStudents = async (req, res) => {
 
     try {
@@ -12,54 +78,58 @@ export const getStudents = async (req, res) => {
             limit = 10,
             skip = 0,
             search = "",
-            sortBy = "student_id",
+            sortBy = "id",
             order = "asc",
         } = req.query;
 
         limit = Number(limit);
         skip = Number(skip);
 
-        // ✅ allowed sortable columns
-        const allowedSortColumns = [
-            "student_id",
-            "first_name",
-            "last_name",
-            "gender",
-            "age",
-            "class",
-            "section",
-            "city",
-            "country",
-        ];
+        // ✅ frontend accessor -> DB column
+        sortBy =
+            studentFieldMap[sortBy]?.db ||
+            "student_id";
 
-        // ✅ prevent SQL injection
-        if (!allowedSortColumns.includes(sortBy)) {
-            sortBy = "student_id";
-        }
-
-        order = order.toLowerCase() === "desc" ? "DESC" : "ASC";
+        // ✅ sanitize order
+        order =
+            order.toLowerCase() === "desc"
+                ? "DESC"
+                : "ASC";
 
         let queryParams = [];
         let whereClause = "";
 
-        // ✅ search filter
+        // ✅ search
         if (search.trim()) {
 
+            const searchableColumns = [
+                "first_name",
+                "last_name",
+                "gender",
+                "city",
+                "country",
+                "class",
+                "section",
+            ];
+
+            const searchConditions = searchableColumns.map(
+                (column, index) =>
+                    `${column} ILIKE $${index + 1}`
+            );
+
             whereClause = `
-                WHERE
-                    first_name ILIKE $1
-                    OR last_name ILIKE $1
-                    OR city ILIKE $1
-                    OR country ILIKE $1
-                    OR gender ILIKE $1
+                WHERE ${searchConditions.join(" OR ")}
             `;
 
-            queryParams.push(`%${search}%`);
+            queryParams = searchableColumns.map(
+                () => `%${search}%`
+            );
         }
 
         // ✅ total count query
         const totalQuery = `
-            SELECT COUNT(*) FROM students
+            SELECT COUNT(*) 
+            FROM students
             ${whereClause}
         `;
 
@@ -71,49 +141,39 @@ export const getStudents = async (req, res) => {
         const total = Number(totalResult.rows[0].count);
 
         // ✅ pagination
-        const limitParamIndex = queryParams.length + 1;
-        const skipParamIndex = queryParams.length + 2;
-
-        queryParams.push(limit);
-        queryParams.push(skip);
-
-        // ✅ final query
-        const studentsQuery = `
+        let studentsQuery = `
             SELECT *
             FROM students
             ${whereClause}
             ORDER BY ${sortBy} ${order}
-            LIMIT $${limitParamIndex}
-            OFFSET $${skipParamIndex}
         `;
+
+        // ✅ apply pagination only if limit > 0
+        if (limit > 0) {
+
+            const limitIndex =
+                queryParams.length + 1;
+
+            const skipIndex =
+                queryParams.length + 2;
+
+            studentsQuery += `
+                LIMIT $${limitIndex}
+                OFFSET $${skipIndex}
+            `;
+
+            queryParams.push(limit);
+            queryParams.push(skip);
+        }
 
         const result = await neonQuery(
             studentsQuery,
             queryParams
         );
 
-        const formattedStudents = result.rows.map((student) => ({
-            id: student.student_id,
-
-            name: {
-                first_name: student.first_name,
-                last_name: student.last_name,
-            },
-
-            gender: student.gender,
-
-            age: student.age,
-
-            classInfo: {
-                class: student.class,
-                section: student.section,
-            },
-
-            address: {
-                city: student.city,
-                country: student.country,
-            },
-        }));
+        // ✅ central formatter
+        const formattedStudents =
+            result.rows.map(formatStudent);
 
         return res.status(200).json({
             success: true,
@@ -125,7 +185,10 @@ export const getStudents = async (req, res) => {
 
     } catch (error) {
 
-        console.error("❌ Get Students Error:", error.message);
+        console.error(
+            "❌ Get Students Error:",
+            error.message
+        );
 
         return res.status(500).json({
             success: false,
@@ -133,7 +196,6 @@ export const getStudents = async (req, res) => {
         });
     }
 };
-
 
 
 // ==============================
