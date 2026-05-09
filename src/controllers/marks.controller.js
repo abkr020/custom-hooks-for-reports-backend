@@ -29,6 +29,14 @@ export const marksFieldMap = {
         db: "last_name",
     },
 
+    "classInfo.class": {
+        db: "class",
+    },
+
+    "classInfo.section": {
+        db: "section",
+    },
+
     "marks.physics": {
         db: "physics_marks",
     },
@@ -122,6 +130,8 @@ export const getMarks = async (req, res) => {
                 "maths_marks",
                 "students.first_name",
                 "students.last_name",
+                "students.class",
+                "students.section",
             ];
 
             const searchConditions =
@@ -162,7 +172,9 @@ export const getMarks = async (req, res) => {
             SELECT 
                 marks.*,
                 students.first_name,
-                students.last_name
+                students.last_name,
+                students.class,
+                students.section
             FROM marks
             LEFT JOIN students
             ON marks.student_id = students.student_id
