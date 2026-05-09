@@ -21,6 +21,14 @@ export const marksFieldMap = {
         db: "student_id",
     },
 
+    "name.first_name": {
+        db: "first_name",
+    },
+
+    "name.last_name": {
+        db: "last_name",
+    },
+
     "marks.physics": {
         db: "physics_marks",
     },
@@ -108,10 +116,12 @@ export const getMarks = async (req, res) => {
 
             const searchableColumns = [
                 "exam_type",
-                "student_id",
+                "marks.student_id",
                 "physics_marks",
                 "chemistry_marks",
                 "maths_marks",
+                "students.first_name",
+                "students.last_name",
             ];
 
             const searchConditions =
@@ -133,6 +143,8 @@ export const getMarks = async (req, res) => {
         const totalQuery = `
             SELECT COUNT(*)
             FROM marks
+            LEFT JOIN students
+            ON marks.student_id = students.student_id
             ${whereClause}
         `;
 
@@ -147,8 +159,13 @@ export const getMarks = async (req, res) => {
 
         // ✅ main query
         let marksQuery = `
-            SELECT *
+            SELECT 
+                marks.*,
+                students.first_name,
+                students.last_name
             FROM marks
+            LEFT JOIN students
+            ON marks.student_id = students.student_id
             ${whereClause}
             ORDER BY ${sortBy} ${order}
         `;
