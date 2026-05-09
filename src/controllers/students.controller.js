@@ -259,3 +259,86 @@ export const getStudentById = async (req, res) => {
         });
     }
 };
+
+// ==============================
+// GET UNIQUE CLASSES
+// ==============================
+export const getUniqueClasses = async (req, res) => {
+
+    try {
+
+        const result = await neonQuery(`
+            SELECT DISTINCT class
+            FROM students
+            ORDER BY class ASC
+        `);
+
+        const classes = result.rows.map(
+            (item) => item.class
+        );
+
+        return res.status(200).json({
+            success: true,
+            total: classes.length,
+            classes,
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Get Unique Classes Error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+
+
+
+// ==============================
+// GET SECTIONS BY CLASS
+// ==============================
+export const getSectionsByClass = async (req, res) => {
+
+    try {
+
+        const { class: className } = req.params;
+
+        const result = await neonQuery(
+            `
+            SELECT DISTINCT section
+            FROM students
+            WHERE class = $1
+            ORDER BY section ASC
+            `,
+            [className]
+        );
+
+        const sections = result.rows.map(
+            (item) => item.section
+        );
+
+        return res.status(200).json({
+            success: true,
+            class: className,
+            total: sections.length,
+            sections,
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Get Sections By Class Error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};

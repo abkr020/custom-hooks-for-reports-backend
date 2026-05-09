@@ -100,6 +100,10 @@ export const getMarks = async (req, res) => {
             search = "",
             sortBy = "id",
             order = "asc",
+            class: className,
+            section,
+            exam_type,
+
         } = req.query;
 
         limit = Number(limit);
@@ -117,9 +121,11 @@ export const getMarks = async (req, res) => {
                 : "ASC";
 
         let queryParams = [];
-        let whereClause = "";
+        let conditions = [];
 
-        // ✅ search
+        // ==============================
+        // SEARCH
+        // ==============================
         if (search.trim()) {
 
             const searchableColumns = [
@@ -140,14 +146,60 @@ export const getMarks = async (req, res) => {
                         `CAST(${column} AS TEXT) ILIKE $${index + 1}`
                 );
 
-            whereClause = `
-                WHERE ${searchConditions.join(" OR ")}
-            `;
+            conditions.push(
+                `(${searchConditions.join(" OR ")})`
+            );
 
-            queryParams = searchableColumns.map(
-                () => `%${search}%`
+            queryParams.push(
+                ...searchableColumns.map(
+                    () => `%${search}%`
+                )
             );
         }
+
+        // ==============================
+        // CLASS FILTER
+        // ==============================
+        if (className) {
+
+            queryParams.push(className);
+
+            conditions.push(
+                `students.class = $${queryParams.length}`
+            );
+        }
+
+        // ==============================
+        // SECTION FILTER
+        // ==============================
+        if (section) {
+
+            queryParams.push(section);
+
+            conditions.push(
+                `students.section = $${queryParams.length}`
+            );
+        }
+
+        // ==============================
+        // EXAM TYPE FILTER
+        // ==============================
+        if (exam_type) {
+
+            queryParams.push(exam_type);
+
+            conditions.push(
+                `marks.exam_type = $${queryParams.length}`
+            );
+        }
+
+        // ==============================
+        // FINAL WHERE CLAUSE
+        // ==============================
+        const whereClause =
+            conditions.length > 0
+                ? `WHERE ${conditions.join(" AND ")}`
+                : "";
 
         // ✅ total count
         const totalQuery = `
@@ -209,6 +261,7 @@ export const getMarks = async (req, res) => {
         const formattedMarks =
             result.rows.map(formatMark);
 
+        // await new Promise((res) => setTimeout(res, 4000));
         return res.status(200).json({
             success: true,
             total,
