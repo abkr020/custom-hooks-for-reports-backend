@@ -80,6 +80,8 @@ export const getStudents = async (req, res) => {
             search = "",
             sortBy = "id",
             order = "asc",
+            class: className,
+            section,
         } = req.query;
 
         limit = Number(limit);
@@ -97,7 +99,7 @@ export const getStudents = async (req, res) => {
                 : "ASC";
 
         let queryParams = [];
-        let whereClause = "";
+        let conditions = [];
 
         // ✅ search
         if (search.trim()) {
@@ -114,19 +116,39 @@ export const getStudents = async (req, res) => {
 
             const searchConditions = searchableColumns.map(
                 (column, index) =>
-                    `${column} ILIKE $${index + 1}`
+                    `CAST(${column} AS TEXT) ILIKE $${index + 1}`
             );
 
-            whereClause = `
-                WHERE ${searchConditions.join(" OR ")}
-            `;
+            conditions.push(`(${searchConditions.join(" OR ")})`);
 
-            queryParams = searchableColumns.map(
-                () => `%${search}%`
-            );
+            queryParams.push(...searchableColumns.map(() => `%${search}%`));
         }
 
-        // ✅ total count query
+        // ==============================
+        // CLASS FILTER
+        // ==============================
+        if (className) {
+            queryParams.push(className);
+            conditions.push(`class = $${queryParams.length}`);
+        }
+
+        // ==============================
+        // SECTION FILTER
+        // ==============================
+        if (section) {
+            queryParams.push(section);
+            conditions.push(`section = $${queryParams.length}`);
+        }
+
+        // ==============================
+        // FINAL WHERE CLAUSE
+        // ==============================
+        const whereClause =
+            conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+        // ==============================
+        // TOTAL COUNT
+        // ==============================
         const totalQuery = `
             SELECT COUNT(*) 
             FROM students
