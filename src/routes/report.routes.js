@@ -1,5 +1,5 @@
 import express from "express";
-import { getSectionsByClass, getStudentById, getStudents, getUniqueClasses } from "../controllers/students.controller.js";
+import { getSections, getSectionsByClass, getStudentById, getStudents, getUniqueClasses } from "../controllers/students.controller.js";
 import { getMarks, getMarksByStudentId } from "../controllers/marks.controller.js";
 
 // import {
@@ -24,7 +24,8 @@ router.get("/marks", getMarks);
 
 router.get("/students/classes", getUniqueClasses);
 
-router.get("/students/classes/:class/sections",getSectionsByClass);
+// router.get("/students/classes/:class/sections",getSectionsByClass);
+router.get("/students/sections",getSections);
 export default router;
 // const users = {
 //     id:"",

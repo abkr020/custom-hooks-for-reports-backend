@@ -102,10 +102,19 @@ export const getMarks = async (req, res) => {
             order = "asc",
             class: className,
             section,
+            classes = "",
+            sections = "",
             exam_type,
 
         } = req.query;
+// convert comma string -> array
+classes = classes
+    ? classes.split(",")
+    : [];
 
+sections = sections
+    ? sections.split(",")
+    : [];
         limit = Number(limit);
         skip = Number(skip);
 
@@ -181,6 +190,23 @@ export const getMarks = async (req, res) => {
             );
         }
 
+        if (classes.length) {
+
+            queryParams.push(classes);
+
+            conditions.push(
+                `students.class = ANY($${queryParams.length})`
+            );
+        }
+
+        if (sections.length) {
+
+            queryParams.push(sections);
+
+            conditions.push(
+                `students.section = ANY($${queryParams.length})`
+            );
+        }
         // ==============================
         // EXAM TYPE FILTER
         // ==============================

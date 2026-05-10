@@ -82,8 +82,16 @@ export const getStudents = async (req, res) => {
             order = "asc",
             class: className,
             section,
+            classes = "",
+            sections = "",
         } = req.query;
+        classes = classes
+            ? classes.split(",")
+            : [];
 
+        sections = sections
+            ? sections.split(",")
+            : [];
         limit = Number(limit);
         skip = Number(skip);
 
@@ -138,6 +146,23 @@ export const getStudents = async (req, res) => {
         if (section) {
             queryParams.push(section);
             conditions.push(`section = $${queryParams.length}`);
+        }
+
+        if (classes.length) {
+
+            queryParams.push(classes);
+
+            conditions.push(
+                `class = ANY($${queryParams.length})`
+            );
+        }
+        if (sections.length) {
+
+            queryParams.push(sections);
+
+            conditions.push(
+                `section = ANY($${queryParams.length})`
+            );
         }
 
         // ==============================
@@ -355,6 +380,69 @@ export const getSectionsByClass = async (req, res) => {
 
         console.error(
             "❌ Get Sections By Class Error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+export const getSections = async (req, res) => {
+
+    try {
+
+        let {
+            classes = "",
+        } = req.query;
+
+        // convert to array
+        classes = classes
+            ? classes.split(",")
+            : [];
+
+        let query = `
+            SELECT DISTINCT section
+            FROM students
+        `;
+
+        let params = [];
+
+        // MULTI CLASS FILTER
+        if (classes.length) {
+
+            params.push(classes);
+
+            query += `
+                WHERE class = ANY($1)
+            `;
+        }
+
+        query += `
+            ORDER BY section ASC
+        `;
+
+        const result = await neonQuery(
+            query,
+            params
+        );
+
+        const sections =
+            result.rows.map(
+                (r) => r.section
+            );
+
+        return res.status(200).json({
+            success: true,
+            total: sections.length,
+            sections,
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Get Sections Error:",
             error.message
         );
 
