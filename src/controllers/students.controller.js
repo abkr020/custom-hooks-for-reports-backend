@@ -227,7 +227,8 @@ export const getStudents = async (req, res) => {
             total,
             limit,
             skip,
-            students: formattedStudents,
+            // students: formattedStudents,
+            data: formattedStudents,
         });
 
     } catch (error) {
