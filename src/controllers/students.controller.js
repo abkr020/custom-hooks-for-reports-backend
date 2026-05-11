@@ -84,6 +84,12 @@ export const getStudents = async (req, res) => {
             section,
             classes = "",
             sections = "",
+            gender,
+            country,
+            city,
+
+
+
         } = req.query;
         classes = classes
             ? classes.split(",")
@@ -162,6 +168,30 @@ export const getStudents = async (req, res) => {
 
             conditions.push(
                 `section = ANY($${queryParams.length})`
+            );
+        }
+        if (gender) {
+
+            queryParams.push(gender);
+
+            conditions.push(
+                `gender = $${queryParams.length}`
+            );
+        }
+        if (country) {
+
+            queryParams.push(country);
+
+            conditions.push(
+                `country = $${queryParams.length}`
+            );
+        }
+        if (city) {
+
+            queryParams.push(city);
+
+            conditions.push(
+                `city = $${queryParams.length}`
             );
         }
 
@@ -444,6 +474,43 @@ export const getSections = async (req, res) => {
 
         console.error(
             "❌ Get Sections Error:",
+            error.message
+        );
+
+        return res.status(500).json({
+            success: false,
+            message: "Server Error",
+        });
+    }
+};
+// ==============================
+// GET UNIQUE COUNTRIES
+// ==============================
+export const getCountries = async (req, res) => {
+
+    try {
+
+        const result = await neonQuery(`
+            SELECT DISTINCT country
+            FROM students
+            WHERE country IS NOT NULL
+            ORDER BY country ASC
+        `);
+
+        const countries = result.rows.map(
+            (item) => item.country
+        );
+
+        return res.status(200).json({
+            success: true,
+            total: countries.length,
+            options: countries,
+        });
+
+    } catch (error) {
+
+        console.error(
+            "❌ Get Countries Error:",
             error.message
         );
 
